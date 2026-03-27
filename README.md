@@ -71,7 +71,7 @@ Monto Final = $100.000 + $21.082,19 = $121.082,19
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/tu-usuario/api-plazoFijo.git
+git clone git@github.com:valeno12/api-plazosFijos.git
 cd api-plazoFijo
 
 # 2. Levantar los contenedores
