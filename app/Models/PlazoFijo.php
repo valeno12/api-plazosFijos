@@ -17,8 +17,6 @@ class PlazoFijo extends Model
         'fecha_inicio',
         'fecha_vencimiento',
         'plazo_dias',
-        'interes_calculado',
-        'monto_final',
         'estado',
     ];
     protected $casts = [

@@ -81,7 +81,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        // Cualquier otro error → 500
+        // Cualquier otro error -> 500
         $exceptions->renderable(function (Throwable $e, Request $request) {
             if ($request->is('api/*') || $request->wantsJson()) {
                 return response()->json([

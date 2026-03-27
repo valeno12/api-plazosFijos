@@ -105,7 +105,7 @@ paths:
 
     put:
       summary: Actualizar un plazo fijo.
-      description: Exige el pasaje del objeto en su totalidad. Modifica los campos y recalcula el interéss.
+      description: Exige el pasaje del objeto en su totalidad. Modifica los campos y recalcula el interés.
       requestBody:
         required: true
         content:
