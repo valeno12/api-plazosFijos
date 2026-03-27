@@ -1,0 +1,340 @@
+openapi: 3.0.3
+info:
+  title: API de Gestión de Plazos Fijos
+  version: 1.0.0
+  description: >
+    API REST CRUD de plazos fijos.
+servers:
+  - url: http://localhost:8000/api
+    description: Servidor de Desarrollo Local
+paths:
+  /plazos-fijos:
+    get:
+      summary: Listar todos los plazos fijos
+      description: Devuelve una lista paginada en 10 registros de todos los plazos fijos, soportando filtros de estado, tipo de moneda y numero de cuenta.
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+          description: Número de la página de resultados.
+        - in: query
+          name: estado
+          schema:
+            type: string
+            enum: [ACTIVO, VENCIDO, CANCELADO, RENOVADO]
+          description: Coincidencia exacta de vigencia.
+        - in: query
+          name: tipo_moneda
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 3
+          description: Coincidencia exacta tipo de moneda (Ej. ARS).
+        - in: query
+          name: numero_cuenta
+          schema:
+            type: string
+          description: Búsqueda parcial (`%LIKE%`) del numero cuenta.
+      responses:
+        '200':
+          description: Listado paginado de plazos fijos resuelto.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PlazoFijoResource'
+                  links:
+                    $ref: '#/components/schemas/PaginationLinks'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+    post:
+      summary: Crear un nuevo plazo fijo
+      description: Persiste e inicializa un nuevo plazo fijo. El sistema automatiza matemáticamente en la base del modelo el cálculo de los intereses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlazoFijoRequest'
+      responses:
+        '201':
+          description: Plazo fijo creado e inicializado exitosamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PlazoFijoResource'
+                  message:
+                    type: string
+                    example: "Plazo fijo creado exitosamente."
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /plazos-fijos/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+        description: PK del plazo fijo en la DB.
+
+    get:
+      summary: Obtener un plazo fijo
+      description: Devuelve el objeto del recurso financiero sin el envoltorio `message`, retornando unívocamente la información.
+      responses:
+        '200':
+          description: Operación de lectura exitosa.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PlazoFijoResource'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      summary: Actualizar un plazo fijo.
+      description: Exige el pasaje del objeto en su totalidad. Modifica los campos y recalcula el interéss.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlazoFijoRequest'
+      responses:
+        '200':
+          description: Mutación lógica exitosa y cálculos actualizados.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PlazoFijoResource'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      summary: Eliminar un plazo fijo
+      description: Agrega un timestamp en la columna `deleted_at` (Soft Deletes) impidiendo transacciones futuras pero persistiendo el registro en la tabla.
+      responses:
+        '200':
+          description: Marca lógica de borrado confirmada.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Plazo fijo eliminado exitosamente."
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+components:
+  schemas:
+    PlazoFijoResource:
+      type: object
+      description: Objeto de salida JSON, notación en camelCase.
+      properties:
+        id:
+          type: integer
+          example: 1
+        numeroCuenta:
+          type: string
+          example: "386-00123-45678"
+        tipoMoneda:
+          type: string
+          example: "ARS"
+        monto:
+          type: number
+          format: float
+          example: 100000.00
+        tasaAnual:
+          type: number
+          format: float
+          example: 85.50
+        fechaInicio:
+          type: string
+          description: "Notación Y-m-d"
+          example: "2024-01-15"
+        fechaVencimiento:
+          type: string
+          description: "Notación Y-m-d"
+          example: "2024-04-15"
+        plazoDias:
+          type: integer
+          example: 90
+        interesCalculado:
+          type: number
+          format: float
+          example: 21082.19
+        montoFinal:
+          type: number
+          format: float
+          example: 121082.19
+        estado:
+          type: string
+          enum: [ACTIVO, VENCIDO, CANCELADO, RENOVADO]
+          example: "ACTIVO"
+        creadoEn:
+          type: string
+          format: date-time
+          description: "Notación internacional ISO-8601."
+          example: "2026-03-27T16:00:00+00:00"
+          nullable: true
+        actualizadoEn:
+          type: string
+          format: date-time
+          description: "Notación internacional ISO-8601."
+          example: "2026-03-27T16:00:00+00:00"
+          nullable: true
+
+    PlazoFijoRequest:
+      type: object
+      description: Objeto de entrada esperado. Usa nomenclatura de las migraciones (snake_case).
+      required:
+        - numero_cuenta
+        - tipo_moneda
+        - monto
+        - tasa_anual
+        - fecha_inicio
+        - fecha_vencimiento
+        - plazo_dias
+      properties:
+        numero_cuenta:
+          type: string
+          maxLength: 50
+          example: "386-00123-45678"
+        tipo_moneda:
+          type: string
+          minLength: 3
+          maxLength: 3
+          example: "ARS"
+        monto:
+          type: number
+          description: "Debe ser estrictamente superior a 0 (gt: 0)."
+          example: 100000
+        tasa_anual:
+          type: number
+          description: "Flotante de porcentaje admitido entre 1 y 200."
+          example: 85.50
+        fecha_inicio:
+          type: string
+          format: date
+          example: "2024-01-15"
+        fecha_vencimiento:
+          type: string
+          format: date
+          description: "Debe ser posterior a la fecha de inicio."
+          example: "2024-04-15"
+        plazo_dias:
+          type: integer
+          description: "No debe superar los 365 días."
+          example: 90
+        estado:
+          type: string
+          enum: [ACTIVO, VENCIDO, CANCELADO, RENOVADO]
+          description: "No es obligatorio que viaje en el request. En caso de null el backend asigna estado 'ACTIVO'"
+          example: "ACTIVO"
+
+    PaginationLinks:
+      type: object
+      properties:
+        first:
+          type: string
+          nullable: true
+        last:
+          type: string
+          nullable: true
+        prev:
+          type: string
+          nullable: true
+        next:
+          type: string
+          nullable: true
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        from:
+          type: integer
+          nullable: true
+        last_page:
+          type: integer
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                nullable: true
+              label:
+                type: string
+              active:
+                type: boolean
+        path:
+          type: string
+        per_page:
+          type: integer
+        to:
+          type: integer
+          nullable: true
+        total:
+          type: integer
+
+  responses:
+    NotFoundError:
+      description: Error general nativo. Usado para DB SoftDeletes y NotFoundHttp.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "El recurso solicitado no fue encontrado."
+
+    ValidationError:
+      description: Excepción disparada estrictamente por fallas en PlazoFijoRequest.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "Los datos proporcionados no son válidos."
+              errors:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                example:
+                  monto:
+                    - "El monto debe ser mayor a 0."
+                  tasa_anual:
+                    - "La tasa anual debe estar entre 1% y 200%."
