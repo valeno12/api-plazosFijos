@@ -36,7 +36,7 @@ API REST para la gestión integral de plazos fijos bancarios con cálculo autom�
 El sistema calcula automáticamente el interés y monto final al crear o actualizar un plazo fijo:
 
 ```
-Interés = Monto × (Tasa Anual / 100 / 365) × Plazo en Días
+Interés = Monto . (Tasa Anual / 100 / 365) . Plazo en Días
 Monto Final = Monto + Interés
 ```
 
@@ -46,7 +46,7 @@ Monto:      $100.000
 Tasa Anual: 85.50%
 Días:       90
 
-Interés     = 100.000 × (85.50 / 100 / 365) × 90 = $21.082,19
+Interés     = 100.000 . (85.50 / 100 / 365) . 90 = $21.082,19
 Monto Final = $100.000 + $21.082,19 = $121.082,19
 ```
 
